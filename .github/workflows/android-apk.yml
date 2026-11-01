@@ -25,11 +25,13 @@ jobs:
       - run: npx expo prebuild -p android --no-install
       - name: Gradle assembleRelease
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
       - uses: actions/upload-artifact@v4
         with:
           name: AnimeFlow-apk
           path: android/app/build/outputs/apk/release/*.apk
+      - name: Renombrar APK
+        run: mv android/app/build/outputs/apk/release/app-release.apk android/app/build/outputs/apk/release/AnimeFlow-arm64.apk
       - name: Publicar APK como release
         uses: softprops/action-gh-release@v2
         with:
