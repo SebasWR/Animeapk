@@ -8,10 +8,10 @@ import type { Anime, ContentProvider, Episode, Stream } from './types';
  * los episodios reales del anime: sustitúyelo por un proveedor con licencia.
  */
 const SAMPLES: { title: string; url: string; format: Stream['format']; durationSec: number }[] = [
-  { title: 'Sintel (HLS)', url: 'https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8', format: 'hls', durationSec: 888 },
+  { title: 'Big Buck Bunny (DASH)', url: 'https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd', format: 'dash', durationSec: 634 },
   { title: 'Big Buck Bunny (HLS)', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', format: 'hls', durationSec: 596 },
   { title: 'Tears of Steel (HLS)', url: 'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', format: 'hls', durationSec: 734 },
-  { title: 'Big Buck Bunny (MP4)', url: 'https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4', format: 'progressive', durationSec: 596 },
+  { title: 'Sintel, tráiler (MP4)', url: 'https://download.blender.org/durian/trailer/sintel_trailer-480p.mp4', format: 'progressive', durationSec: 52 },
 ];
 
 export const demoProvider: ContentProvider = {
