@@ -22,6 +22,9 @@ jobs:
           distribution: temurin
           java-version: 17
       - run: npm ci
+      - name: Comprobar APIs de catálogo
+        continue-on-error: true
+        run: node scripts/check-apis.mjs src/providers/anilist.ts
       - run: npx expo prebuild -p android --no-install
       - name: Gradle assembleRelease
         working-directory: android

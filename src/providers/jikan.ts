@@ -17,7 +17,9 @@ async function get<T>(path: string): Promise<T> {
   // Serializa las peticiones con una pequeña pausa para respetar el límite.
   const run = queue.then(async () => {
     for (let attempt = 0; attempt < 3; attempt++) {
-      const res = await fetch(BASE + path);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12000);
+      const res = await fetch(BASE + path, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
       if (res.status === 429) {
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;

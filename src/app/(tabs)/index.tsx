@@ -14,10 +14,15 @@ export default function Home() {
   const trending = useAsync(() => metadata.trending(), []);
   const top = useAsync(() => metadata.topRated(), []);
 
-  if (airing.loading && !airing.data) return <Loading />;
-  if (airing.error && !airing.data) return <ErrorState message="No se pudo cargar el catálogo." onRetry={airing.retry} />;
+  const all = [airing, trending, top];
+  if (all.every((r) => r.loading && !r.data)) return <Loading />;
+  if (all.every((r) => r.error && !r.data)) {
+    const retry = () => all.forEach((r) => r.retry());
+    return <ErrorState message="No se pudo cargar el catálogo. Revisa tu conexión." onRetry={retry} />;
+  }
 
-  const featured = airing.data?.find((a) => a.score && a.score >= 7.5) ?? airing.data?.[0];
+  const lead = airing.data ?? trending.data ?? top.data;
+  const featured = lead?.find((a) => a.score && a.score >= 7.5) ?? lead?.[0];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 32 }}>
