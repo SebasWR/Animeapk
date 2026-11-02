@@ -25,7 +25,14 @@ export type Anime = {
   genres: string[];
   type?: string;
   trailerYoutubeId?: string;
+  /** Dónde verlo legalmente (Crunchyroll, Netflix, YouTube oficial...). */
+  watchLinks?: WatchLink[];
+  /** Episodios en plataformas oficiales, cada uno con su enlace. */
+  officialEpisodes?: OfficialEpisode[];
 };
+
+export type WatchLink = { site: string; url: string; color?: string };
+export type OfficialEpisode = { number: number; title: string; thumbnail?: string; url: string; site: string };
 
 export type Episode = {
   id: string;

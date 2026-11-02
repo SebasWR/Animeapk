@@ -3,12 +3,12 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { FlatList, Linking, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ErrorState, Loading } from '../../components/States';
 import { useAsync } from '../../components/useAsync';
-import { getProvider, metadata, type Episode } from '../../providers';
+import { getProvider, metadata, type Episode, type OfficialEpisode } from '../../providers';
 import { colors, fonts, radius, spacing } from '../../theme';
 
 export default function AnimeDetail() {
@@ -19,11 +19,17 @@ export default function AnimeDetail() {
   const [expanded, setExpanded] = useState(false);
 
   const anime = useAsync(() => metadata.details(id), [id]);
-  const episodes = useAsync(async () => (anime.data ? provider.episodes(anime.data) : []), [anime.data]);
+  const [demo, setDemo] = useState(false);
+  const episodes = useAsync(async () => (anime.data && demo ? provider.episodes(anime.data) : []), [anime.data, demo]);
 
   if (anime.loading && !anime.data) return <Loading />;
   if (anime.error || !anime.data) return <ErrorState message="No se pudo cargar este anime." onRetry={anime.retry} />;
   const a = anime.data;
+
+  const official = a.officialEpisodes ?? [];
+  const links = a.watchLinks ?? [];
+  const open = (url: string) => Linking.openURL(url).catch(() => {});
+  const trailer = a.trailerYoutubeId ? `https://www.youtube.com/watch?v=${a.trailerYoutubeId}` : undefined;
 
   const play = (ep: Episode) =>
     router.push({ pathname: '/player', params: { animeId: a.id, episode: String(ep.number), provider: provider.id } });
@@ -53,14 +59,26 @@ export default function AnimeDetail() {
       </View>
 
       <View style={styles.body}>
-        <Pressable
-          style={styles.playBtn}
-          disabled={!episodes.data?.length}
-          onPress={() => episodes.data?.[0] && play(episodes.data[0])}
-        >
-          <Ionicons name="play" size={20} color="#fff" />
-          <Text style={styles.playText}>Reproducir episodio 1</Text>
-        </Pressable>
+        {official[0] || links[0] || trailer ? (
+          <Pressable style={styles.playBtn} onPress={() => open(official[0]?.url ?? links[0]?.url ?? trailer!)}>
+            <Ionicons name="play" size={20} color="#fff" />
+            <Text style={styles.playText}>
+              {official[0] ? `Ver episodio ${official[0].number} en ${official[0].site}` : links[0] ? `Ver en ${links[0].site}` : 'Ver tráiler'}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {links.length || trailer ? (
+          <View style={{ gap: spacing.sm }}>
+            <Text style={fonts.h2}>Dónde verlo</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
+              {trailer ? <LinkChip label="Tráiler (YouTube)" color="#FF0033" onPress={() => open(trailer)} /> : null}
+              {links.map((l) => (
+                <LinkChip key={l.url} label={l.site} color={l.color} onPress={() => open(l.url)} />
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
 
         <View style={styles.genres}>
           {a.genres.map((g) => (
@@ -77,28 +95,71 @@ export default function AnimeDetail() {
 
         <View style={styles.epHeader}>
           <Text style={fonts.h2}>Episodios</Text>
-          <Text style={styles.source}>{provider.name}</Text>
+          <Text style={styles.source}>{demo ? provider.name : official.length ? 'Oficiales' : ''}</Text>
         </View>
+        {!demo && !official.length ? (
+          <Text style={fonts.body}>
+            {links.length
+              ? 'No hay lista de episodios para este título; ábrelo en una de las plataformas de arriba.'
+              : 'No conocemos una plataforma oficial con este título en este momento.'}
+          </Text>
+        ) : null}
+        <Pressable onPress={() => setDemo((d) => !d)}>
+          <Text style={styles.more}>{demo ? 'Ocultar videos de demostración' : 'Probar el reproductor con videos de demostración'}</Text>
+        </Pressable>
       </View>
     </View>
   );
 
   return (
     <View style={styles.screen}>
-      <FlatList
-        data={episodes.data ?? []}
-        keyExtractor={(e) => e.id}
+      <FlatList<Row>
+        data={demo ? (episodes.data ?? []).map((e) => ({ kind: 'demo' as const, e })) : official.map((o) => ({ kind: 'official' as const, o }))}
+        keyExtractor={(x) => (x.kind === 'demo' ? x.e.id : x.o.url)}
         ListHeaderComponent={header}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-        renderItem={({ item }) => <EpisodeRow ep={item} onPress={() => play(item)} />}
-        ListEmptyComponent={
-          episodes.loading ? <Loading /> : <Text style={[fonts.body, { padding: spacing.lg }]}>Esta fuente no tiene episodios para este título.</Text>
+        renderItem={({ item }) =>
+          item.kind === 'demo' ? (
+            <EpisodeRow ep={item.e} onPress={() => play(item.e)} />
+          ) : (
+            <OfficialRow ep={item.o} onPress={() => open(item.o.url)} />
+          )
         }
+        ListEmptyComponent={demo && episodes.loading ? <Loading /> : undefined}
       />
       <Pressable style={[styles.back, { top: insets.top + 8 }]} onPress={() => router.back()} hitSlop={10}>
         <Ionicons name="chevron-back" size={24} color={colors.text} />
       </Pressable>
     </View>
+  );
+}
+
+type Row = { kind: 'demo'; e: Episode } | { kind: 'official'; o: OfficialEpisode };
+
+function LinkChip({ label, color, onPress }: { label: string; color?: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.chip, { borderColor: color ?? colors.border }]}>
+      <Ionicons name="open-outline" size={14} color={color ?? colors.text} />
+      <Text style={styles.chipText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function OfficialRow({ ep, onPress }: { ep: OfficialEpisode; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.ep, pressed && { backgroundColor: colors.surface }]}>
+      <View style={styles.thumb}>
+        {ep.thumbnail ? <Image source={{ uri: ep.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
+        <View style={styles.thumbOverlay}>
+          <Ionicons name="open-outline" size={18} color="#fff" />
+        </View>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.epNum}>EP {ep.number}</Text>
+        <Text style={styles.epTitle} numberOfLines={2}>{ep.title}</Text>
+        <Text style={fonts.small}>Ver en {ep.site}</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -151,6 +212,11 @@ const styles = StyleSheet.create({
   ep: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, alignItems: 'center' },
   thumb: { width: 140, aspectRatio: 16 / 9, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: colors.surface },
   thumbOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: radius.pill,
+    paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.surface,
+  },
+  chipText: { color: colors.text, fontWeight: '700', fontSize: 13 },
   epNum: { color: colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   epTitle: { color: colors.text, fontSize: 14, fontWeight: '600', marginVertical: 2 },
 });

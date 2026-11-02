@@ -15,3 +15,11 @@ const demo = (await import('node:fs')).readFileSync('src/providers/demo.ts', 'ut
 for (const [, u] of demo.matchAll(/url: '([^']+)'/g)) {
   try { const r = await fetch(u, { headers: { Range: 'bytes=0-1023' }, signal: AbortSignal.timeout(15000) }); console.log('DEMO', u, r.status); } catch (e) { console.log('DEMO', u, 'ERROR', e.message); }
 }
+// Enlaces oficiales y episodios
+const EXTRA = src.match(/const EXTRA = `([\s\S]*?)`;/)[1];
+for (const id of [34572, 52991, 21]) {
+  const q = `query ($id: Int) { Media(idMal: $id, type: ANIME) { title { romaji } ${EXTRA} } }`;
+  const r = await fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q, variables: { id } }) });
+  const j = await r.json(); const m = j.data?.Media;
+  console.log('OFICIAL', id, r.status, j.errors?.[0]?.message ?? `${m.title.romaji}: ${m.externalLinks.filter(l => l.type === 'STREAMING').map(l => l.site).join(', ')} | eps ${m.streamingEpisodes.length} ${JSON.stringify(m.streamingEpisodes[0] ?? {})}`);
+}

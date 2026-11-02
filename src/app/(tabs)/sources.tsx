@@ -16,7 +16,11 @@ export default function Sources() {
       </Text>
 
       <View style={styles.card}>
-        <Row icon="information-circle" title="Catálogo" text="Jikan (datos públicos de MyAnimeList): títulos, portadas, sinopsis y puntuaciones." />
+        <Row icon="information-circle" title="Catálogo" text="AniList (y Jikan/MyAnimeList de respaldo): títulos, portadas, sinopsis, puntuaciones y dónde ver cada anime legalmente." />
+      </View>
+
+      <View style={styles.card}>
+        <Row icon="tv" title="Episodios oficiales" text="Cada anime muestra sus episodios y enlaces a plataformas con licencia (Crunchyroll, Netflix, canales oficiales de YouTube...). Al tocarlos se abre la app o web de esa plataforma." />
       </View>
 
       {providers.map((p) => (

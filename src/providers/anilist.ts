@@ -1,4 +1,4 @@
-import type { Anime, MetadataSource } from './types';
+import type { Anime, MetadataSource, OfficialEpisode } from './types';
 
 /**
  * Metadatos desde AniList (API GraphQL pública). Usamos el id de MyAnimeList
@@ -17,6 +17,7 @@ const FIELDS = `
   trailer { id site }
   startDate { year }
 `;
+const EXTRA = `externalLinks { site url type color } streamingEpisodes { title thumbnail url site }`;
 
 async function gql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
   const key = query + JSON.stringify(variables);
@@ -58,6 +59,8 @@ type Media = {
   bannerImage?: string | null;
   trailer?: { id?: string | null; site?: string | null } | null;
   startDate?: { year?: number | null };
+  externalLinks?: { site: string; url: string; type?: string | null; color?: string | null }[] | null;
+  streamingEpisodes?: { title?: string | null; thumbnail?: string | null; url?: string | null; site?: string | null }[] | null;
 };
 
 const STATUS: Record<string, string> = {
@@ -82,7 +85,27 @@ function map(m: Media): Anime {
     type: m.format ?? undefined,
     genres: m.genres ?? [],
     trailerYoutubeId: m.trailer?.site === 'youtube' ? m.trailer.id ?? undefined : undefined,
+    watchLinks: (m.externalLinks ?? [])
+      .filter((l) => l.type === 'STREAMING' && l.url)
+      .map((l) => ({ site: l.site, url: l.url, color: l.color ?? undefined })),
+    officialEpisodes: officialEpisodes(m),
   };
+}
+
+function officialEpisodes(m: Media): OfficialEpisode[] {
+  const eps = (m.streamingEpisodes ?? []).filter((e) => e.url);
+  const out = eps.map((e, i) => {
+    const title = e.title ?? '';
+    const n = Number(/(?:episode|episodio|ep\.?)\s*(\d+)/i.exec(title)?.[1] ?? NaN);
+    return {
+      number: Number.isFinite(n) ? n : i + 1,
+      title: title.replace(/^(?:episode|episodio|ep\.?)\s*\d+\s*[-:–]\s*/i, '') || `Episodio ${i + 1}`,
+      thumbnail: e.thumbnail ?? undefined,
+      url: e.url as string,
+      site: e.site ?? '',
+    };
+  });
+  return out.sort((a, b) => a.number - b.number);
 }
 
 const PAGE = `query ($page: Int, $sort: [MediaSort], $search: String, $status: MediaStatus) {
@@ -103,7 +126,7 @@ export const anilist: MetadataSource = {
   search: (query, page = 1) => list({ page, sort: ['SEARCH_MATCH'], search: query.trim() }),
   async details(id) {
     const r = await gql<{ Media: Media }>(
-      `query ($id: Int) { Media(idMal: $id, type: ANIME) { ${FIELDS} } }`,
+      `query ($id: Int) { Media(idMal: $id, type: ANIME) { ${FIELDS} ${EXTRA} } }`,
       { id: Number(id) },
     );
     return map(r.Media);
