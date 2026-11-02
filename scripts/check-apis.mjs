@@ -10,3 +10,8 @@ for (const [q,v] of [[PAGE,{page:1,sort:['POPULARITY_DESC'],status:'RELEASING'}]
 for (const u of ['https://api.jikan.moe/v4/seasons/now?sfw=true', 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1-CXtrrkMpJ8Zq.png']) {
   try { const r = await fetch(u, { signal: AbortSignal.timeout(15000) }); console.log(u, r.status); } catch (e) { console.log(u, 'ERROR', e.message); }
 }
+// Videos de demo
+const demo = (await import('node:fs')).readFileSync('src/providers/demo.ts', 'utf8');
+for (const [, u] of demo.matchAll(/url: '([^']+)'/g)) {
+  try { const r = await fetch(u, { headers: { Range: 'bytes=0-1023' }, signal: AbortSignal.timeout(15000) }); console.log('DEMO', u, r.status); } catch (e) { console.log('DEMO', u, 'ERROR', e.message); }
+}
