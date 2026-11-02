@@ -1,0 +1,22 @@
+name: Comprobar URLs
+on: workflow_dispatch
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in \
+            https://bitmovin-a.akamaihd.net/content/sintel/hls/playlist.m3u8 \
+            https://test-streams.mux.dev/tos_ismc/main.m3u8 \
+            https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8 \
+            https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8 \
+            https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd \
+            https://download.blender.org/durian/trailer/sintel_trailer-480p.mp4 \
+            https://download.blender.org/peach/trailer/trailer_480p.mov \
+            https://bitmovin-a.akamaihd.net/content/MI201109210084_1/m3u8s/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8 \
+            https://demo.unified-streaming.com/k8s/features/stable/video/caminandes-llama-drama/caminandes-llama-drama.ism/.m3u8 \
+            https://demo.unified-streaming.com/k8s/features/stable/video/sintel/sintel.ism/.m3u8 \
+            https://demo.unified-streaming.com/k8s/features/stable/video/elephants-dream/elephants-dream.ism/.m3u8 \
+            https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4 ; do
+            echo "URL $(curl -s -o /dev/null -w '%{http_code} %{content_type}' -r 0-1023 -m 20 -L "$u") $u"
+          done
